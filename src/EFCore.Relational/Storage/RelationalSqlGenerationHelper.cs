@@ -181,6 +181,46 @@ public class RelationalSqlGenerationHelper : ISqlGenerationHelper
     }
 
     /// <summary>
+    ///     Generates the escaped SQL representation of an identifier (column name, table name, etc.).
+    /// </summary>
+    /// <param name="identifier">The identifier to be escaped.</param>
+    /// <returns>The generated string.</returns>
+    public virtual string EscapeJsonPathElement(string identifier)
+        => identifier.Replace("\"", "\"\"");
+
+    /// <summary>
+    ///     Writes the escaped SQL representation of an identifier (column name, table name, etc.).
+    /// </summary>
+    /// <param name="builder">The <see cref="StringBuilder" /> to write generated string to.</param>
+    /// <param name="identifier">The identifier to be escaped.</param>
+    public virtual void EscapeJsonPathElement(StringBuilder builder, string identifier)
+    {
+        var initialLength = builder.Length;
+        builder.Append(identifier);
+        builder.Replace("\"", "\"\"", initialLength, identifier.Length);
+    }
+
+    /// <summary>
+    ///     Writes the delimited SQL representation of an element in a JSON path.
+    /// </summary>
+    /// <param name="pathElement">The JSON path element to delimit.</param>
+    /// <returns>The generated string.</returns>
+    public string DelimitJsonPathElement(string pathElement)
+        => $"\"{EscapeJsonPathElement(pathElement)}\"";
+
+    /// <summary>
+    ///     Writes the delimited SQL representation of an element in a JSON path.
+    /// </summary>
+    /// <param name="builder">The <see cref="StringBuilder" /> to write generated string to.</param>
+    /// <param name="pathElement">The JSON path element to delimit.</param>
+    public void DelimitJsonPathElement(StringBuilder builder, string pathElement)
+    {
+        builder.Append('"');
+        EscapeJsonPathElement(builder, pathElement);
+        builder.Append('"');
+    }
+
+    /// <summary>
     ///     Generates a SQL comment.
     /// </summary>
     /// <param name="text">The comment text.</param>

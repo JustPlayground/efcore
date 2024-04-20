@@ -226,7 +226,7 @@ public class SqliteQuerySqlGenerator : QuerySqlGenerator
                 case { PropertyName: string propertyName }:
                     if (inJsonpathString)
                     {
-                        Sql.Append(".").Append(propertyName);
+                        Sql.Append(".").Append(Dependencies.SqlGenerationHelper.DelimitJsonPathElement(propertyName));
                         continue;
                     }
 

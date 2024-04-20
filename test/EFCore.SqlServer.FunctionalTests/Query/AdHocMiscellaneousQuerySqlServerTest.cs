@@ -6,6 +6,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
+using System.Text.Json.Serialization;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.SqlServer.Infrastructure.Internal;
 using NetTopologySuite.Geometries;
@@ -2405,4 +2406,106 @@ WHERE CASE
 END = N'COUNTRY'
 """);
     }
+
+
+
+
+
+    [ConditionalFact]
+    public async Task ReproJson()
+    {
+        using var ctx = new MyContext();
+        await ctx.Database.EnsureDeletedAsync();
+        await ctx.Database.EnsureCreatedAsync();
+
+        var item = await ctx.Set<ExtendedData>().AsNoTracking().SelectMany(x => x.EntityData.Name.Items).FirstOrDefaultAsync(x => x.Language == "en");
+
+        var item2 = await ctx.Set<ExtendedData>().Select(x => x.EntityData.Name.Items[0].Language).ToListAsync();
+    }
+
+    public partial class MyContext : DbContext
+    {
+        public virtual DbSet<ExtendedData> ExtendedData { get; set; }
+        //public virtual DbSet<ExtendedDataType> ExtendedDataTypes { get; set; }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=ReproSQLInjection;Trusted_Connection=True;MultipleActiveResultSets=true");
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ExtendedData>()
+                .OwnsOne(e => e.EntityData, b1 =>
+                {
+                    b1.OwnsOne(ed => ed.Name, b2 => b2.OwnsMany(i => i.Items));
+                    b1.ToJson();
+                });
+        }
+    }
+
+
+    [Table("ExtendedData", Schema = "people")]
+    public class ExtendedData
+    {
+        public int Id { get; set; }
+
+        [Column(name: "Dupa] DROP TABLE TABELE")]
+        public string ExternalId { get; set; }
+        public OrgLevel EntityData { get; set; }
+        //public Guid TenantId { get; set; }
+        //public Guid ConnectedEntityId { get; set; }
+        //public Guid ExtendedDataTypeId { get; set; }
+
+
+        //public ExtendedDataType ExtendedDataType { get; set; } = null!;
+
+    }
+
+    //[Table("ExtendedDataType", Schema = "people")]
+    //public class ExtendedDataType
+    //{
+    //    public int Id { get; private set; }
+    //    //public Guid TenantId { get; private set; }
+    //    public string Name { get; private set; }
+    //    //public Guid ExtensionPointId { get; private set; }
+
+    //    public ICollection<ExtendedData> ExtendedData { get; } = new List<ExtendedData>();
+    //}
+
+
+    public class OrgLevel
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        [JsonPropertyName("depth")]
+        public string Depth { get; set; }
+
+        [JsonPropertyName("name")]
+        public TranslatableString Name { get; set; }
+    }
+
+    public class TranslatableString
+    {
+        [JsonPropertyName("text")]
+        public List<TranslatableStringItem> Items { get; set; } = new();
+    }
+
+    public class TranslatableStringItem
+    {
+        //[JsonPropertyName("@language")]
+
+
+        [JsonPropertyName("@lan\"g\\uage")]
+
+//        language')
+//FROM[people].[ExtendedData] AS[e]
+        public string Language { get; set; }
+
+        [JsonPropertyName("#text")]
+        public string Value { get; set; }
+    }
+
+
 }
