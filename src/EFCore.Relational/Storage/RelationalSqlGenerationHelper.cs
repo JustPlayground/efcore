@@ -186,7 +186,57 @@ public class RelationalSqlGenerationHelper : ISqlGenerationHelper
     /// <param name="identifier">The identifier to be escaped.</param>
     /// <returns>The generated string.</returns>
     public virtual string EscapeJsonPathElement(string identifier)
-        => identifier.Replace("\"", "\"\"");
+    {
+        var result = string.Empty;
+        foreach (var c in identifier)
+        {
+            if (char.IsAscii(c))
+            {
+                result = result + c;
+            }
+            else
+            {
+                result = result + $"\\u{(int)c:x4}";
+            }
+        }
+
+
+
+        var stream = new MemoryStream();
+        var writer = new System.Text.Json.Utf8JsonWriter(stream, new System.Text.Json.JsonWriterOptions { Indented = false });
+
+        //writer.WritePropertyName(identifier);
+        writer.WriteStartObject();
+
+        writer.WritePropertyName(identifier);
+        writer.Flush();
+
+
+        var result555 = Encoding.UTF8.GetString(stream.ToArray());
+
+        var siki = result555[2..^2];
+
+        return siki;
+
+
+
+
+        //var foo = "day’s";
+        //byte[] bytes2 = Encoding.Default.GetBytes(foo);
+        //var result2 = Encoding.UTF8.GetString(bytes2);
+
+
+
+        ////byte[] bytes = Encoding.Default.GetBytes(identifier);
+        ////var result = Encoding.UTF8.GetString(bytes);
+
+        //return result;
+        //return identifier.Replace("\"", "\\\"").Replace("'", "''");
+    }
+
+
+
+        //=> 
 
     /// <summary>
     ///     Writes the escaped SQL representation of an identifier (column name, table name, etc.).
@@ -196,8 +246,13 @@ public class RelationalSqlGenerationHelper : ISqlGenerationHelper
     public virtual void EscapeJsonPathElement(StringBuilder builder, string identifier)
     {
         var initialLength = builder.Length;
-        builder.Append(identifier);
-        builder.Replace("\"", "\"\"", initialLength, identifier.Length);
+
+        byte[] bytes = Encoding.Default.GetBytes(identifier);
+        var result = Encoding.UTF8.GetString(bytes);
+
+        builder.Append(result);
+        //builder.Append(identifier);
+        builder.Replace("\"", "\\\"", initialLength, identifier.Length);
     }
 
     /// <summary>
@@ -205,8 +260,10 @@ public class RelationalSqlGenerationHelper : ISqlGenerationHelper
     /// </summary>
     /// <param name="pathElement">The JSON path element to delimit.</param>
     /// <returns>The generated string.</returns>
-    public string DelimitJsonPathElement(string pathElement)
-        => $"\"{EscapeJsonPathElement(pathElement)}\"";
+    public virtual string DelimitJsonPathElement(string pathElement)
+        => pathElement.Any(x => !char.IsLetter(x))
+            ? $"\"{EscapeJsonPathElement(pathElement)}\""
+            : pathElement;
 
     /// <summary>
     ///     Writes the delimited SQL representation of an element in a JSON path.

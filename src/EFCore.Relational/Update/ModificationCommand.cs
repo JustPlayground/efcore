@@ -236,14 +236,14 @@ public class ModificationCommand : IModificationCommand, INonTrackedModification
     protected virtual IColumnModification CreateColumnModification(in ColumnModificationParameters columnModificationParameters)
         => new ColumnModification(columnModificationParameters);
 
-    protected string BuildJsonPathString(List<JsonPartialUpdatePathEntry> path, IProperty? property)
-    {
-        var result = string.Join(".", path.Select(x => x.PropertyName + (x.Ordinal != null ? "[" + x.Ordinal + "]" : "")));
-        if (property is not null)
-        {
-            result = result + "." + property.GetJsonPropertyName();
-        }
-    }
+    //private string BuildJsonPathString(List<JsonPartialUpdatePathEntry> path, IProperty? property)
+    //{
+    //    var result = string.Join(".", path.Select(x => x.PropertyName + (x.Ordinal != null ? "[" + x.Ordinal + "]" : "")));
+    //    if (property is not null)
+    //    {
+    //        result = result + "." + property.GetJsonPropertyName();
+    //    }
+    //}
 
     private sealed class JsonPartialUpdateInfo
     {
@@ -252,11 +252,13 @@ public class ModificationCommand : IModificationCommand, INonTrackedModification
         public object? PropertyValue { get; set; }
     }
 
-    protected internal record struct JsonPartialUpdatePathEntry(
-        string PropertyName,
-        int? Ordinal,
-        IUpdateEntry ParentEntry,
-        INavigation Navigation);
+    private record struct JsonPartialUpdatePathEntry(string PropertyName, int? Ordinal, IUpdateEntry ParentEntry, INavigation Navigation);
+
+    //private internal record struct JsonPartialUpdatePathEntry(
+    //    string PropertyName,
+    //    int? Ordinal,
+    //    IUpdateEntry ParentEntry,
+    //    INavigation Navigation);
 
     private List<IColumnModification> GenerateColumnModifications()
     {

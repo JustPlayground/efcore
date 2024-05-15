@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Text.Encodings.Web;
 using Microsoft.EntityFrameworkCore.Internal;
 using static System.Linq.Expressions.Expression;
 
@@ -54,6 +55,7 @@ public static class LiftableConstantExpressionHelpers
         {
             int or long or uint or ulong or short or sbyte or ushort or byte or double or float or decimal or string or char or bool => true,
             null or Type or Enum => true,
+            JavaScriptEncoder => true,
             TimeSpan or DateTime or DateTimeOffset or DateOnly or TimeOnly or Guid => true,
             ITuple tuple
                 when tuple.GetType() is { IsGenericType: true } tupleType

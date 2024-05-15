@@ -1,6 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+
 namespace Microsoft.EntityFrameworkCore.Query;
 
 #nullable disable
@@ -367,6 +370,67 @@ public abstract class AdHocJsonQueryTestBase : NonSharedModelTestBase
         public class SubRound
         {
             public int SubRoundNumber { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 33443
+
+    protected virtual async Task Seed33443(Context33443 ctx)
+    {
+        var e = new Context33443.Entity { Id = 1, Json = new Context33443.JsonEntity { Number = 7 } };
+        ctx.Entities.Add(e);
+        await ctx.SaveChangesAsync();
+    }
+
+    [ConditionalFact]
+    public virtual async Task Query_json_with_property_containing_special_chars_and_unicode()
+    {
+
+
+        var kupa = System.Text.Json.JsonEncodedText.Encode(value: "Number`-=[]\\;',./~!@#$%^&*()_+{}|:\"<>?独角兽π獨角獸",
+            encoder: default(System.Text.Encodings.Web.JavaScriptEncoder));
+
+
+        var contextFactory = await InitializeAsync<Context33443>(seed: Seed33443);
+        using var context = contextFactory.CreateContext();
+        var query = context.Entities.ToList();
+        Assert.Equal(1, query.Count);
+        Assert.Equal(7, query[0].Json.Number);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Query_json_property_containing_special_chars_and_unicode()
+    {
+        var contextFactory = await InitializeAsync<Context33443>(seed: Seed33443);
+        using var context = contextFactory.CreateContext();
+        var query = context.Entities.Select(x => x.Json.Number).ToList();
+        Assert.Equal(1, query.Count);
+        Assert.Equal(7, query[0]);
+    }
+
+    protected class Context33443(DbContextOptions options) : DbContext(options)
+    {
+        public DbSet<Entity> Entities { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Entity>().Property(x => x.Id).ValueGeneratedNever();
+            modelBuilder.Entity<Entity>().OwnsOne(x => x.Json).ToJson();
+        }
+
+        public class Entity
+        {
+            public int Id { get; set; }
+
+            public JsonEntity Json { get; set; }
+        }
+
+        public class JsonEntity
+        {
+            [JsonPropertyName("Number`-=[]\\;',./~!@#$%^&*()_+{}|:\"<>?独角兽π獨角獸")]
+            public int Number { get; set; }
         }
     }
 
@@ -1040,6 +1104,9 @@ public abstract class AdHocJsonQueryTestBase : NonSharedModelTestBase
     }
 
     #endregion
+
+
+
 
     protected TestSqlLoggerFactory TestSqlLoggerFactory
         => (TestSqlLoggerFactory)ListLoggerFactory;
