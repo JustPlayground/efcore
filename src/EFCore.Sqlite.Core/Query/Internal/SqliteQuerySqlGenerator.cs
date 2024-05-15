@@ -235,11 +235,12 @@ public class SqliteQuerySqlGenerator : QuerySqlGenerator
                     // No need to start a $. JSONPATH string if we're the last segment or the next segment isn't a constant
                     if (isLast || path[i + 1] is { ArrayIndex: not null and not SqlConstantExpression })
                     {
-                        Sql.Append("'").Append(propertyName).Append("'");
+                        Sql.Append("'").Append(Dependencies.SqlGenerationHelper.DelimitJsonPathElement(propertyName)).Append("'");
+                        //Sql.Append(Dependencies.SqlGenerationHelper.DelimitJsonPathElement(propertyName));
                         continue;
                     }
 
-                    Sql.Append("'$.").Append(propertyName);
+                    Sql.Append("'$.").Append(Dependencies.SqlGenerationHelper.DelimitJsonPathElement(propertyName));
                     inJsonpathString = true;
                     continue;
 

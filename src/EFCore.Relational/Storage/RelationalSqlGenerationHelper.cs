@@ -261,7 +261,7 @@ public class RelationalSqlGenerationHelper : ISqlGenerationHelper
     /// <param name="pathElement">The JSON path element to delimit.</param>
     /// <returns>The generated string.</returns>
     public virtual string DelimitJsonPathElement(string pathElement)
-        => pathElement.Any(x => !char.IsLetter(x))
+        => pathElement.Any(x => !char.IsAsciiLetterOrDigit(x))
             ? $"\"{EscapeJsonPathElement(pathElement)}\""
             : pathElement;
 

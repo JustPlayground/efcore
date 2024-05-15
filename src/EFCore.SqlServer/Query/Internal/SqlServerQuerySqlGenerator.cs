@@ -501,6 +501,11 @@ public class SqlServerQuerySqlGenerator : QuerySqlGenerator
     {
         Sql.Append("'$");
 
+        if (path.Count == 2)
+        {
+            Console.WriteLine(  "gf");
+        }
+
         foreach (var pathSegment in path)
         {
             switch (pathSegment)

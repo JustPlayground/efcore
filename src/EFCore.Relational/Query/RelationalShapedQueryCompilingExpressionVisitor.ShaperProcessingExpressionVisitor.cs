@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
@@ -80,6 +81,12 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
 
         private static readonly MethodInfo ReadOnlySpanSequenceEqualMethod
             = typeof(MemoryExtensions).GetMethod(nameof(MemoryExtensions.SequenceEqual), [typeof(ReadOnlySpan<>), typeof(ReadOnlySpan<>)])!;
+
+        private static readonly PropertyInfo EncodingUtf8Property
+            = typeof(Encoding).GetProperty(nameof(Encoding.UTF8))!;
+
+        private static readonly MethodInfo Utf8GetBytesMethod
+            = typeof(Encoding).GetMethod(nameof(Encoding.GetBytes), [typeof(string)])!;
 
         private static readonly MethodInfo Utf8JsonReaderTrySkipMethod
             = typeof(Utf8JsonReader).GetMethod(nameof(Utf8JsonReader.TrySkip), [])!;
@@ -1923,6 +1930,11 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                             && x.prms[1].ParameterType.IsGenericType && x.prms[1].ParameterType.GetGenericTypeDefinition() == typeof(ReadOnlySpan<>))
                         .Single().x;
 
+                    var byteArrayAsSpanMethod = typeof(MemoryExtensions).GetMethods().Where(x => x.Name == nameof(MemoryExtensions.AsSpan) && x.GetGenericArguments().Count() == 1)
+                        .Select(x => new { x, prms = x.GetParameters() })
+                        .Where(x => x.prms.Count() == 1 && x.prms[0].ParameterType.IsArray)
+                        .Single().x.MakeGenericMethod(typeof(byte));
+
                     var breakLabel = Label("done");
                     var testExpressions = new List<Expression>();
                     var readExpressions = new List<Expression>();
@@ -1933,43 +1945,144 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         var property = valueBufferTryReadValueMethodToProcess.Arguments[2].GetConstantValue<IProperty>();
                         var jsonPropertyName = property.GetJsonPropertyName()!;
 
+
+
+                        //Expression<Func<byte[]>> lambda = () => Encoding.UTF8.GetBytes(jsonPropertyName);
+
+                        //var expr = lambda.Body;
+
+
+                        //Utf8JsonReader r;
+
+
+
+                        ////var span = JsonEncodedText.Encode(jsonPropertyName).EncodedUtf8Bytes;
+                        //var span = Encoding.UTF8.GetBytes(jsonPropertyName).AsSpan();
+
+
+                        //var foo = r.ValueTextEquals(span);
+
+
+                        //Call(
+                        //    byteArrayAsSpanMethod,
+                        //    Call(
+                        //        Property(null, EncodingUtf8Property),
+                        //        Utf8GetBytesMethod))
+
                         testExpressions.Add(
                             Call(
-                                sequenceEqualMethod.MakeGenericMethod(typeof(byte)),
-
-
-                                Property(
-
                                 Field(
                                     managerVariable,
                                     Utf8JsonReaderManagerCurrentReaderField),
+                                Utf8JsonReaderValueTextEqualsMethod,
 
-                                "ValueSpan"),
-
-
-
-                                //Utf8JsonReaderValueTextEqualsMethod,
-                                //ReadOnlySpanSequenceEqualMethod.MakeGenericMethod(typeof(byte)),
-                                Property(
-                                    _liftableConstantFactory.CreateLiftableConstant(
-
-                                        //jsonPropertyName,
-
+                                Convert(
+                                    Call(
+                                    byteArrayAsSpanMethod,
+                                    Call(
+                                        Property(null, EncodingUtf8Property),
+                                        Utf8GetBytesMethod,
+                                        Constant(jsonPropertyName))),
+                                    typeof(ReadOnlySpan<>).MakeGenericType(typeof(byte)))));
 
 
-                                        JsonEncodedText.Encode(jsonPropertyName),
-                                        Lambda<Func<MaterializerLiftableConstantContext, object>>(
-                                            Convert(
-                                                Call(
-                                                    JsonEncodedTextEncodeMethod,
-                                                    Constant(jsonPropertyName),
-                                                    //Constant(JavaScriptEncoder.UnsafeRelaxedJsonEscaping)),
-                                                    Default(typeof(JavaScriptEncoder))),
-                                                typeof(object)),
-                                            Parameter(typeof(MaterializerLiftableConstantContext), "_")),
-                                        jsonPropertyName + "EncodedProperty",
-                                        typeof(JsonEncodedText)),
-                                    JsonEncodedTextEncodedUtf8BytesProperty)));
+                                //Call(
+                                //    byteArrayAsSpanMethod,
+                                //    Call(
+                                //        Property(null, EncodingUtf8Property),
+                                //        Utf8GetBytesMethod,
+                                //        Constant(jsonPropertyName)))));
+
+
+
+
+                                //Property(
+                                //    _liftableConstantFactory.CreateLiftableConstant(
+                                //        JsonEncodedText.Encode(jsonPropertyName),
+                                //        Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                                //            Convert(
+                                //                Call(
+                                //                    JsonEncodedTextEncodeMethod,
+                                //                    Constant(jsonPropertyName),
+                                //                    Default(typeof(JavaScriptEncoder))),
+                                //                typeof(object)),
+                                //            Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                                //        jsonPropertyName + "EncodedProperty",
+                                //        typeof(JsonEncodedText)),
+                                //    JsonEncodedTextEncodedUtf8BytesProperty)));
+
+
+
+
+                        //testExpressions.Add(
+                        //    Call(
+                        //        Field(
+                        //            managerVariable,
+                        //            Utf8JsonReaderManagerCurrentReaderField),
+                        //        Utf8JsonReaderValueTextEqualsMethod,
+                        //        Property(
+                        //            _liftableConstantFactory.CreateLiftableConstant(
+                        //                JsonEncodedText.Encode(jsonPropertyName),
+                        //                Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                        //                    Convert(
+                        //                        Call(
+                        //                            JsonEncodedTextEncodeMethod,
+                        //                            Constant(jsonPropertyName),
+                        //                            Default(typeof(JavaScriptEncoder))),
+                        //                        typeof(object)),
+                        //                    Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                        //                jsonPropertyName + "EncodedProperty",
+                        //                typeof(JsonEncodedText)),
+                        //            JsonEncodedTextEncodedUtf8BytesProperty)));
+
+
+
+
+
+
+
+
+
+
+
+
+                        //testExpressions.Add(
+                        //    Call(
+                        //        sequenceEqualMethod.MakeGenericMethod(typeof(byte)),
+
+
+                        //        Property(
+
+                        //        Field(
+                        //            managerVariable,
+                        //            Utf8JsonReaderManagerCurrentReaderField),
+
+                        //        "ValueSpan"),
+
+
+
+                        //        //Utf8JsonReaderValueTextEqualsMethod,
+                        //        //ReadOnlySpanSequenceEqualMethod.MakeGenericMethod(typeof(byte)),
+                        //        Property(
+                        //            _liftableConstantFactory.CreateLiftableConstant(
+
+                        //                //jsonPropertyName,
+
+
+
+                        //                JsonEncodedText.Encode(jsonPropertyName),
+                        //                Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                        //                    Convert(
+                        //                        Call(
+                        //                            JsonEncodedTextEncodeMethod,
+                        //                            Constant(jsonPropertyName),
+                        //                            //Constant(JavaScriptEncoder.UnsafeRelaxedJsonEscaping)),
+                        //                            Default(typeof(JavaScriptEncoder))),
+                        //                        typeof(object)),
+                        //                    Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                        //                jsonPropertyName + "EncodedProperty",
+                        //                typeof(JsonEncodedText)),
+                        //            JsonEncodedTextEncodedUtf8BytesProperty)));
 
 
 
@@ -2026,26 +2139,68 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     foreach (var innerShaperMapElement in _innerShapersMap)
                     {
                         var innerShaperMapElementKey = innerShaperMapElement.Key;
+
+
+
+
+
+
                         testExpressions.Add(
                             Call(
                                 Field(
                                     managerVariable,
                                     Utf8JsonReaderManagerCurrentReaderField),
                                 Utf8JsonReaderValueTextEqualsMethod,
-                                Property(
-                                    _liftableConstantFactory.CreateLiftableConstant(
-                                        JsonEncodedText.Encode(innerShaperMapElementKey),
-                                        Lambda<Func<MaterializerLiftableConstantContext, object>>(
-                                            Convert(
-                                                Call(
-                                                    JsonEncodedTextEncodeMethod,
-                                                    Constant(innerShaperMapElementKey),
-                                                    Default(typeof(JavaScriptEncoder))),
-                                                typeof(object)),
-                                            Parameter(typeof(MaterializerLiftableConstantContext), "_")),
-                                        innerShaperMapElementKey + "EncodedNavigation",
-                                        typeof(JsonEncodedText)),
-                                    JsonEncodedTextEncodedUtf8BytesProperty)));
+                                Convert(
+                                    Call(
+                                    byteArrayAsSpanMethod,
+                                    Call(
+                                        Property(null, EncodingUtf8Property),
+                                        Utf8GetBytesMethod,
+                                        Constant(innerShaperMapElementKey))),
+                                    typeof(ReadOnlySpan<>).MakeGenericType(typeof(byte)))));
+
+
+
+
+
+
+
+
+
+
+                        //testExpressions.Add(
+                        //    Call(
+                        //        Field(
+                        //            managerVariable,
+                        //            Utf8JsonReaderManagerCurrentReaderField),
+                        //        Utf8JsonReaderValueTextEqualsMethod,
+
+
+                        //        Call(
+                        //            byteArrayAsSpanMethod,
+                        //            Call(
+                        //                Property(null, EncodingUtf8Property),
+                        //                Utf8GetBytesMethod))));
+
+
+
+
+
+                        //Property(
+                        //            _liftableConstantFactory.CreateLiftableConstant(
+                        //                JsonEncodedText.Encode(innerShaperMapElementKey),
+                        //                Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                        //                    Convert(
+                        //                        Call(
+                        //                            JsonEncodedTextEncodeMethod,
+                        //                            Constant(innerShaperMapElementKey),
+                        //                            Default(typeof(JavaScriptEncoder))),
+                        //                        typeof(object)),
+                        //                    Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                        //                innerShaperMapElementKey + "EncodedNavigation",
+                        //                typeof(JsonEncodedText)),
+                        //            JsonEncodedTextEncodedUtf8BytesProperty)));
 
                         var propertyVariable = Variable(innerShaperMapElement.Value.Type);
                         finalBlockVariables.Add(propertyVariable);

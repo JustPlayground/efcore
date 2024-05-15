@@ -258,6 +258,16 @@ WHERE "j"."Reference" ->> 'BoolConvertedToStringYN' = 'Y'
 """);
     }
 
+    public override async Task Custom_naming_projection_everything(bool async)
+    {
+        await base.Custom_naming_projection_everything(async);
+
+        AssertSql(
+"""
+SELECT "j"."Id", "j"."Reference"
+""");
+    }
+
     public override async Task Json_collection_in_projection_with_anonymous_projection_of_scalars(bool async)
         => Assert.Equal(
             SqliteStrings.ApplyNotSupported,
